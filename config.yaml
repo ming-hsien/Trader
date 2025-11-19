@@ -1,0 +1,16 @@
+SYMBOL: BTCUSDT
+TIME_FRAME: 1h
+FEE_RATE: 0.001 # 0.1% per trade (maker/taker simplified)
+SLIPPAGE_TICKS: 1 # 1 tick slippage in backtest (simplified)
+INITIAL_EQUITY: 10000.0
+RISK_PER_TRADE: 0.01 # 1% of equity
+MAX_DAILY_DRAWDOWN: 0.03 # stop opening new trades if breached
+
+STRATEGY:
+NAME: SmaAtrStrategy
+SMA_FAST: 20
+SMA_SLOW: 50
+ATR_PERIOD: 14
+ATR_MULT_SL: 1.0 # initial/trailing stop = 1ATR
+ATR_MULT_TP: 2.0 # take-profit = 2ATR
+ALLOW_SHORT: false # long-only by default
