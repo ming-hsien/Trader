@@ -1,3 +1,7 @@
+EXCHANGE: "binance"
+API_KEY: "YOUR_API_KEY"
+SECRET: "YOUR_SECRET"
+
 SYMBOL: BTCUSDT
 TIME_FRAME: 1h
 FEE_RATE: 0.001 # 0.1% per trade (maker/taker simplified)
