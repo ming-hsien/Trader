@@ -6,29 +6,13 @@ import pandas as pd
 
 import order
 from position_manager import PositionManager
-
+from signal_generator import generate_signal
 
 def fetch_ohlcv(exchange, symbol, timeframe="5m", limit=200) -> pd.DataFrame:
     bars = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
     df = pd.DataFrame(bars, columns=["ts","open","high","low","close","volume"])
     df["ts"] = pd.to_datetime(df["ts"], unit="ms")
     return df
-
-def generate_signal(df, strategy):
-    if strategy == "auto":
-        best_strat = best_strategy()
-        strategy = best_strat
-        
-    if strategy == "sma":
-        df_sig = generate_sma_signals(df)
-    elif strategy == "ema":
-        df_sig = generate_ema_signals(df)
-    elif strategy == "alligator":
-        df_sig = generate_alligator_signals(df)
-        
-    # 用倒數第二根避免 repaint
-    last = df_sig.iloc[-2]
-    return last["signal_long"], last["signal_exit"]
 
 def load_config(path="../config.yaml") -> dict:
     """
