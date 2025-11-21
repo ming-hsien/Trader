@@ -6,9 +6,9 @@ import argparse
 import json
 import matplotlib.pyplot as plt
 
-import alligator
-import sma
-import ema
+import backtest.alligator as alligator
+import backtest.sma as sma
+import backtest.ema as ema
 
 def fetch_klines_ccxt(
     symbol: str = "XRP/USDT",
@@ -82,6 +82,35 @@ def plot_equity_curve(eq: pd.Series, out_path: str | None = None):
     else:
         plt.show()
 
+def backtest(strategy: str, df: pd.DataFrame, initial_equity: float = 10_000.0, fee_rate: float = 0.001):
+    """
+    根據策略名稱執行回測
+    """
+    if strategy == "sma":
+        df_sig = sma.compute_signals(df)
+        return sma.backtest_sma_cross(
+            df_sig,
+            initial_equity=initial_equity,
+            fee_rate=fee_rate,
+        )
+    elif strategy == "alligator":
+        df_sig = alligator.compute_signals(df)
+        return alligator.backtest_alligator(
+            df_sig,
+            initial_equity=initial_equity,
+            fee_rate=fee_rate,
+        )
+    elif strategy == "ema":
+        df_sig = ema.compute_signals(df)
+        return ema.backtest_ema_cross(
+            df_sig,
+            initial_equity=initial_equity,
+            fee_rate=fee_rate,
+        )
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbol", type=str, default="XRP/USDT", help="交易對，例如 XRP/USDT, BTC/USDT")
@@ -96,31 +125,12 @@ def main():
 
     df_raw = fetch_klines_ccxt(symbol=args.symbol, timeframe=args.timeframe, lookback_days=args.days)
     
-    if args.strategy == "sma":
-        df_ind = sma.add_indicators(df_raw)
-        df_sig = sma.compute_signals(df_ind)
-        equity, trades, stats = sma.backtest_sma_cross(
-            df_sig,
-            initial_equity=args.initial,
-            fee_rate=args.fee,
-        )
-        
-    elif args.strategy == "alligator":
-        df_ind = alligator.add_alligator(df_raw)
-        df_sig = alligator.generate_alligator_signals(df_ind)
-        equity, trades, stats = alligator.backtest_alligator(
-            df_sig,
-            initial_equity=args.initial,
-            fee_rate=args.fee,
-        )
-    
-    elif args.strategy == "ema":
-        df_ind = ema.generate_ema_signals(df_raw)
-        equity, trades, stats = ema.backtest_ema_cross(
-            df_ind,
-            initial_equity=args.initial,
-            fee_rate=args.fee,
-        )
+    equity, trades, stats = backtest(
+        strategy=args.strategy,
+        df=df_raw,
+        initial_equity=args.initial,
+        fee_rate=args.fee,
+    )
 
     print("[RESULT] Backtest stats:")
     print(json.dumps(stats, indent=2, ensure_ascii=False))

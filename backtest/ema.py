@@ -4,18 +4,56 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from types_trading import Trade
+from backtest.types_trading import Trade
 
-def generate_ema_signals(df, fast=20, slow=50):
-    df = df.copy()
-    df["ema_fast"] = df["close"].ewm(span=fast, adjust=False).mean()
-    df["ema_slow"] = df["close"].ewm(span=slow, adjust=False).mean()
+def add_ema_indicators(df: pd.DataFrame, fast: int = 20, slow: int = 50) -> pd.DataFrame:
+    """
+    在 DataFrame 上加上 EMA_fast / EMA_slow
+    """
+    if fast >= slow:
+        raise ValueError("EMA fast 必須小於 slow，例如 fast=20, slow=50")
 
-    df["signal_long"] = (df["ema_fast"] > df["ema_slow"]) & (df["ema_fast"].shift(1) <= df["ema_slow"].shift(1))
-    df["signal_exit"] = (df["ema_fast"] < df["ema_slow"]) & (df["ema_fast"].shift(1) >= df["ema_slow"].shift(1))
+    out = df.copy()
+    close = out["close"]
 
-    df["next_open"] = df["open"].shift(-1)
-    return df
+    out[f"EMA_{fast}"] = close.ewm(span=fast, adjust=False).mean()
+    out[f"EMA_{slow}"] = close.ewm(span=slow, adjust=False).mean()
+
+    return out
+
+
+def compute_signals(df: pd.DataFrame, fast: int = 20, slow: int = 50) -> pd.DataFrame:
+    """
+    產生可調參數的 EMA fast / EMA slow 交叉策略訊號。
+    - 黃金交叉 → signal_long = True
+    - 死亡交叉 → signal_exit = True
+    """
+
+    out = add_ema_indicators(df, fast=fast, slow=slow)
+
+    ema_fast = f"EMA_{fast}"
+    ema_slow = f"EMA_{slow}"
+
+    out[f"{ema_fast}_prev"] = out[ema_fast].shift(1)
+    out[f"{ema_slow}_prev"] = out[ema_slow].shift(1)
+
+    # 黃金交叉
+    out["signal_long"] = (
+        (out[f"{ema_fast}_prev"] <= out[f"{ema_slow}_prev"]) &
+        (out[ema_fast] > out[ema_slow])
+    )
+
+    # 死亡交叉
+    out["signal_exit"] = (
+        (out[f"{ema_fast}_prev"] >= out[f"{ema_slow}_prev"]) &
+        (out[ema_fast] < out[ema_slow])
+    )
+
+    # 下一根 K 的 open 當作下單價
+    out["next_open"] = out["open"].shift(-1)
+
+    return out
+
 
 def backtest_ema_cross(
     df_sig: pd.DataFrame,
@@ -27,7 +65,7 @@ def backtest_ema_cross(
     trades: List[Trade] = []
 
     cash = initial_equity
-    position = 0.0            # 幣的數量（例如 XRP）
+    position = 0.0
     entry_price = None
     entry_time = None
 
@@ -35,22 +73,17 @@ def backtest_ema_cross(
         row = df_sig.iloc[i]
         px_next_open = row["next_open"]
 
-        # 若資料不完整，跳過
         if np.isnan(px_next_open) or px_next_open <= 0:
             equity_curve.append(cash + position * row["close"])
             continue
 
-        # ------------------------------
-        # 出場邏輯（已有部位 + 出場訊號）
-        # ------------------------------
         if position > 0 and row["signal_exit"]:
             gross = position * px_next_open
             fee = gross * fee_rate
             cash_in = gross - fee
 
-            # 報酬率（含進出場手續費）
             ret = (px_next_open * (1 - fee_rate)) / (entry_price * (1 + fee_rate)) - 1.0
-            pnl = cash_in                         # 如果你之後想拆 PnL 可修改
+            pnl = cash_in
 
             cash += cash_in
 
@@ -65,14 +98,11 @@ def backtest_ema_cross(
                 )
             )
 
-            # reset position
+            # reset
             position = 0.0
             entry_price = None
             entry_time = None
 
-        # ------------------------------
-        # 進場邏輯（空手 + 進場訊號）
-        # ------------------------------
         if position == 0 and row["signal_long"]:
             size = cash / (px_next_open * (1 + fee_rate))
             cost = size * px_next_open
@@ -84,23 +114,14 @@ def backtest_ema_cross(
             entry_price = px_next_open
             entry_time = row["open_time"]
 
-        # ------------------------------
-        # 每根 bar 計算市值
-        # ------------------------------
         mtm_equity = cash + position * row["close"]
         equity_curve.append(mtm_equity)
 
-    # ------------------------------
-    # 產生 equity series
-    # ------------------------------
     equity_series = pd.Series(
         equity_curve, 
         index=df_sig["open_time"].iloc[: len(equity_curve)]
     )
 
-    # ------------------------------
-    # KPI 統計
-    # ------------------------------
     returns = equity_series.pct_change().fillna(0.0)
     total_return = equity_series.iloc[-1] / initial_equity - 1.0
     max_equity = equity_series.cummax()

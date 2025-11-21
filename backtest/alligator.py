@@ -2,7 +2,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from types_trading import Trade
+from backtest.types_trading import Trade
 
 def smma(series: pd.Series, period: int) -> pd.Series:
     """
@@ -14,9 +14,9 @@ def smma(series: pd.Series, period: int) -> pd.Series:
 def add_alligator(df: pd.DataFrame) -> pd.DataFrame:
     """
     在 DataFrame 上加上 Alligator 三條線：
-    - jaw   (下顎)  : 13 期 SMMA，右移 8 根
-    - teeth (牙齒)  : 8 期 SMMA，右移 5 根
-    - lips  (嘴唇)  : 5 期 SMMA，右移 3 根
+    - jaw   (下顎)  : 13 期 SMMA, 右移 8 根
+    - teeth (牙齒)  : 8 期 SMMA, 右移 5 根
+    - lips  (嘴唇)  : 5 期 SMMA, 右移 3 根
 
     假設 df 至少有欄位: ["high", "low"]
     """
@@ -30,7 +30,7 @@ def add_alligator(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def generate_alligator_signals(df: pd.DataFrame) -> pd.DataFrame:
+def compute_signals(df: pd.DataFrame) -> pd.DataFrame:
     """
     根據鱷魚策略產生進出場訊號 & position。
     假設 df 至少有: ["open", "high", "low", "close"]。
