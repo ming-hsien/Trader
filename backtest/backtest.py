@@ -10,6 +10,8 @@ import backtest.alligator as alligator
 import backtest.sma as sma
 import backtest.ema as ema
 
+from backtest.signal_generator import generate_signal
+
 def fetch_klines_ccxt(
     symbol: str = "XRP/USDT",
     timeframe: str = "1h",
@@ -86,22 +88,20 @@ def backtest(strategy: str, df: pd.DataFrame, initial_equity: float = 10_000.0, 
     """
     根據策略名稱執行回測
     """
+    df_sig = generate_signal(df, strategy=strategy)
     if strategy == "sma":
-        df_sig = sma.compute_signals(df)
         return sma.backtest_sma_cross(
             df_sig,
             initial_equity=initial_equity,
             fee_rate=fee_rate,
         )
     elif strategy == "alligator":
-        df_sig = alligator.compute_signals(df)
         return alligator.backtest_alligator(
             df_sig,
             initial_equity=initial_equity,
             fee_rate=fee_rate,
         )
     elif strategy == "ema":
-        df_sig = ema.compute_signals(df)
         return ema.backtest_ema_cross(
             df_sig,
             initial_equity=initial_equity,
