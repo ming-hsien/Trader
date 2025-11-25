@@ -127,7 +127,7 @@ def best_strategy(symbol, timeframe, lookback_days=365):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", type=str, default="../config.yaml", help="config file path")
+    ap.add_argument("--config", type=str, default="config.yaml", help="config file path")
     args = ap.parse_args()
     
     config = load_config(path=args.config)
