@@ -84,11 +84,10 @@ def plot_equity_curve(eq: pd.Series, out_path: str | None = None):
     else:
         plt.show()
 
-def backtest(strategy: str, df: pd.DataFrame, initial_equity: float = 10_000.0, fee_rate: float = 0.001):
+def backtest(strategy: str, df_sig: pd.DataFrame, initial_equity: float = 10_000.0, fee_rate: float = 0.001):
     """
     根據策略名稱執行回測
     """
-    df_sig = generate_signal(df, strategy=strategy)
     if strategy == "sma":
         return sma.backtest_sma_cross(
             df_sig,
@@ -125,9 +124,10 @@ def main():
 
     df_raw = fetch_klines_ccxt(symbol=args.symbol, timeframe=args.timeframe, lookback_days=args.days)
     
+    df_sig = generate_signal(df_raw, args.strategy, fast=10, slow=50)
     equity, trades, stats = backtest(
         strategy=args.strategy,
-        df=df_raw,
+        df_sig=df_sig,
         initial_equity=args.initial,
         fee_rate=args.fee,
     )
@@ -141,3 +141,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+ 

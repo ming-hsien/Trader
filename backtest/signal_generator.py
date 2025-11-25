@@ -3,13 +3,13 @@ import backtest.sma as sma
 import backtest.ema as ema
 import backtest.alligator as alligator
 
-def generate_signal(df, strategy, trader=False):
+def generate_signal(df, strategy, trader=False, **params):
     df_sig = None
     
     if strategy == "sma":
-        df_sig = sma.compute_signals(df)
+        df_sig = sma.compute_signals(df, fast=params["fast"], slow=params["slow"])
     elif strategy == "ema":
-        df_sig = ema.compute_signals(df)
+        df_sig = ema.compute_signals(df, fast=params["fast"], slow=params["slow"])
     elif strategy == "alligator":
         df_sig = alligator.compute_signals(df)
     
